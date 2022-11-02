@@ -1,0 +1,31 @@
+#Jugador1
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_a:
+                Player1_y_speed=3
+            if event.key == pygame.K_d:
+                Player1_y_speed=-3
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_a:
+                Player1_y_speed = 3
+            if event.key == pygame.K_d:
+                Player1_y_speed = 3
+    ##Mueve Al P1
+    Player1_y_coord += Player1_y_speed
+    ##Rutina de rebote P1
+    if Player1_y_coord >540 or Player1_y_coord <10:
+        Player1_y_speed *=-1
+    ##Rutina de rebote P1
+
+
+
+
+
+
+
+
+
+
+    ##Si Sale de la pantalla, la pelota vuelve al centr
+        pelota_speed_x *= -1
+        pelota_speed_y *= -1
+

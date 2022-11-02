@@ -1,0 +1,713 @@
+import pygame, random
+
+##Dimensiones Pantalla
+from pygame.mixer import SoundType
+
+WIDTH = 1024
+HEIGHT = 600
+
+##Colores en RGB
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+PURPLE = (255, 0, 255)
+
+pygame.init()
+pygame.mixer.init()
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Shooter")
+clock = pygame.time.Clock()
+
+
+# Texto En pantalla
+def draw_text(surface, text, size, x, y):
+    font = pygame.font.SysFont("serif", size)
+    text_surface = font.render(text, True, WHITE)
+    text_rect = text_surface.get_rect()
+    text_rect.midtop = (int(x), int(y))
+    surface.blit(text_surface, text_rect)
+
+
+# Barra de escudo
+def draw_shield_bar(surface, x, y, percentage):
+    BAR_LENGHT = 100
+    BAR_HEIGHT = 10
+    fill = (percentage / 100) * BAR_LENGHT
+    border = pygame.Rect(x, y, BAR_LENGHT, BAR_HEIGHT)
+    fill = pygame.Rect(int(x), int(y), int(fill), BAR_HEIGHT)
+    pygame.draw.rect(surface, GREEN, fill)
+    pygame.draw.rect(surface, WHITE, border, 2)
+
+
+
+
+#####################-SONIDOS INICIO-#####################
+##Musica de fondo
+##sound1 = pygame.mixer.Sound("quake_1.ogg")
+sound1: SoundType = pygame.mixer.Sound("musica/musica_3.ogg")
+sound1.play()
+volumen = (0.4)
+sound1.set_volume(volumen)
+
+
+
+
+sound2: SoundType = pygame.mixer.Sound("musica/musica_2.ogg")
+sound2.set_volume(0)
+sound2.play()
+
+
+sound3: SoundType = pygame.mixer.Sound("quake_1.ogg")
+sound3.set_volume(0)
+sound3.play()
+
+##Sonido Disparo
+
+laser_sound = pygame.mixer.Sound("musica/disparo.ogg")
+volumen_laser = (0.5)
+laser_sound.set_volume(volumen_laser)
+
+##Sonido Explosion meteoro
+meteor_sound = pygame.mixer.Sound("musica/explosionmeteoro.wav")
+
+##Sonido Explosion enemigo
+enemy_sound = pygame.mixer.Sound("musica/explosionave.wav")
+
+##Sonido Daño
+
+damage = pygame.mixer.Sound("musica/damage.wav")
+
+##Sonido GameOver
+
+goverSound = pygame.mixer.Sound("musica/gameover.wav")
+
+
+#####################-SONIDOS FIN-#########################
+
+
+
+## Pausa...
+def pausa():
+    pausado = True
+
+    while pausado:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_c:
+                    pausado = False
+                elif event.key == pygame.K_q:
+                    pygame.quit()
+                    quit()
+
+        screen.fill(BLACK)
+        pygame.display.update()
+        draw_text(screen, "Pausa", 65, WIDTH // 2, HEIGHT // 4)
+        sound1.set_volume(0)  # corta la muscica de fondo
+        draw_text(screen, "Tocar C para continuar o Q para quitar", 27, WIDTH // 2, HEIGHT // 2)
+        pygame.display.flip()
+        clock.tick(5)
+
+    sound1.set_volume(volumen)
+
+
+
+
+
+
+#####################-IMAGENES INICIO-#####################
+
+##Fondo de pantalla, usa imagenes de la carpeta raiz
+background = pygame.image.load("assets/fondo/fondo2.jpg").convert()
+background2 = pygame.image.load("assets/fondo/fondo3.jpg").convert()
+background3 = pygame.image.load("assets/fondo/fondo1.jpg").convert()
+
+##introduccion de sprites Player y redimencionar
+playersprite = pygame.image.load("assets/player/playership.jpg").convert()
+playersprite = pygame.transform.scale(playersprite, (65, 65))
+
+##introduccion de sprites PlayerShot y redimencionar
+playershot = pygame.image.load("assets/player/playershot1.jpg").convert()
+playershot = pygame.transform.scale(playershot, (60, 60))
+
+##introduccion de sprites Meteoro y redimencionar
+meteorsprite = pygame.image.load("assets/meteor/meteor1.jpg").convert()
+meteorsprite = pygame.transform.scale(meteorsprite, (55, 55))
+
+##introduccion de sprites Meteoro y redimencionar
+shipenemy = pygame.image.load("assets/enemy/shipenemy.jpg").convert()
+shipenemy = pygame.transform.scale(shipenemy, (55, 55))
+
+##Explosiones
+explode = pygame.image.load("assets/enemy/enemyexplode.jpg").convert()
+explode = pygame.transform.scale(explode, (55, 55))
+
+#####################-IMAGENES FIN-#########################
+
+##Estrellas
+##generamos posiciones aleatorias en la pantalla y las guardamos
+coor_list = []
+for i in range(60):
+    x = random.randint(0, WIDTH)
+    y = random.randint(0, HEIGHT)
+    coor_list.append([x, y])
+
+
+#####################-CLASES Inicio-#########################
+
+class Explosion(pygame.sprite.Sprite):
+    def __init__(self, center):
+        super().__init__()
+        self.image = explode
+        self.rect = self.image.get_rect()
+        self.rect.center = center
+        self.last_update = pygame.time.get_ticks()
+        self.frame_rate = 50
+
+    def update(self):
+        now = pygame.time.get_ticks()
+
+
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = playersprite
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+        self.rect.centerx = WIDTH // 2
+        self.rect.bottom = HEIGHT - 10
+        self.speed_x = 0
+        ##Vida del personaje
+        self.live = 100
+
+    def update(self):
+        self.speed_x = 0
+        keystate = pygame.key.get_pressed()
+        if keystate[pygame.K_a] or keystate[pygame.K_LEFT]:
+            self.speed_x = -5
+        if keystate[pygame.K_d] or keystate[pygame.K_RIGHT]:
+            self.speed_x = 5
+        self.rect.x += self.speed_x
+        if self.rect.right > WIDTH:
+            self.rect.right = WIDTH
+        if self.rect.left < 0:
+            self.rect.left = 0
+
+    def shoot(self):
+        bullet = Bullet(self.rect.centerx, self.rect.top)
+        all_sprites.add(bullet)
+        bullets.add(bullet)
+        laser_sound.play()
+
+
+##Clase balas (Jugador)
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = playershot
+        self.image.set_colorkey(WHITE)
+        self.rect = self.image.get_rect()
+        self.rect.y = y
+        self.rect.centerx = x
+        self.speedy = -10
+        self.damage = 10
+
+    def update(self):
+        self.rect.y += self.speedy
+        if self.rect.bottom < 0:
+            self.kill()
+
+
+##Clase Meteoro
+
+class Meteor(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = meteorsprite
+        self.image.set_colorkey(WHITE)
+        self.rect = self.image.get_rect()
+        self.rect.x = random.randrange(WIDTH - self.rect.width)
+        self.rect.y = random.randrange(-100, -40)
+        self.speedy = random.randrange(1, 10)
+        self.speedx = random.randrange(-5, 5)
+        self.live = 30
+
+    def update(self):
+        self.rect.x += self.speedx
+        self.rect.y += self.speedy
+        if self.rect.top > HEIGHT + 10 or self.rect.left < -25 or self.rect.right > WIDTH + 22:
+            self.rect.x = random.randrange(WIDTH - self.rect.width)
+            self.rect.y = random.randrange(-100, -40)
+            self.speedy = random.randrange(1, 3)
+
+
+##Clase enemigo
+
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = shipenemy
+        self.image.set_colorkey(WHITE)
+        self.rect = self.image.get_rect()
+        self.rect.x = random.randrange(WIDTH - self.rect.width)
+        self.rect.y = random.randrange(-100, -40)
+        self.speedy = random.randrange(1, 10)
+        self.speedx = random.randrange(-5, 5)
+        self.live = 30
+
+    def update(self):
+        self.rect.x += self.speedx
+        self.rect.y += self.speedy
+        if self.rect.top > HEIGHT + 10 or self.rect.left < -25 or self.rect.right > WIDTH + 22:
+            self.rect.x = random.randrange(WIDTH - self.rect.width)
+            self.rect.y = random.randrange(-100, -40)
+            self.speedy = random.randrange(1, 5)
+
+
+#####################-CLASES FIN-#########################
+
+
+#####################-Procesamiento de Sprites Inicio-#########################
+
+
+##Listas de los sprites
+all_sprites = pygame.sprite.Group()
+
+##Lista de meteors
+meteor_list = pygame.sprite.Group()
+##Lista de bullets
+bullets = pygame.sprite.Group()
+
+##Lista Enemigos
+enemy_list = pygame.sprite.Group()
+
+player = Player()
+all_sprites.add(player)
+
+# Creacion de meteors el range cambia la cantidad
+for i in range(4):
+    meteor = Meteor()
+    all_sprites.add(meteor)
+    meteor_list.add(meteor)
+
+# Creacion de enemigos el range cambia la cantidad
+for i in range(8):
+    enemy = Enemy()
+    all_sprites.add(enemy)
+    enemy_list.add(enemy)
+
+##Score
+score = 0
+
+# Game Loop
+##Game over
+game_over = True
+running = True
+
+
+#####################-Niveles-#########################
+
+
+##GameOver en pantalla
+
+
+
+
+
+class GameState():
+    def __init__(self):
+        self.state="lvl1"
+        self.mainScreen = True
+        self.volumen=0.4
+        self.score=0
+        self.waiting = False
+        self.running = True
+
+
+    def state_manager(self):
+
+
+        if 0 <= self.score < 250 or self.state=="lvl1":
+            self.lvl1()
+            print(player.live)
+
+        if 250 <= self.score < 750:
+            self.state = "lvl2"
+            print(self.state)
+        if self.state =="lvl2":
+            self.lvl2()
+
+        if self.score > 750:
+            self.state = "lvl3"
+            print(self.state)
+        if self.state =="lvl3":
+            self.lvl3()
+
+        if player.live<=0:
+            self.running = False
+
+
+
+
+    def show_gameover_screen(self):
+        draw_text(screen, "Proyecto Juego", 65, WIDTH // 2, HEIGHT // 4)
+        draw_text(screen, "Empezar el juego", 27, WIDTH // 2, HEIGHT // 2)
+        draw_text(screen, "Presiona una tecla", 20, WIDTH // 2, HEIGHT * 3 / 4)
+        pygame.display.flip()
+        self.waiting = True
+        while self.waiting:
+            clock.tick(60)
+            print("en pausa")
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.score=0
+
+
+
+
+
+
+##Nivel 1
+    def lvl1(self):
+
+        # Process input (events)
+        for event in pygame.event.get():
+            # check for closing window
+            if event.type == pygame.QUIT:
+                self.running=False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pausa()
+
+                if event.key == pygame.K_SPACE:
+                    player.shoot()
+
+                ##Volumen Musica -
+                if event.key == pygame.K_DOWN:
+                    self.volumen -= 0.10
+                    sound1.set_volume(self.volumen)
+
+                ##Volumen Musica +
+                if event.key == pygame.K_UP:
+                    self.volumen += 0.10
+                    sound1.set_volume(self.volumen)
+                    if self.volumen >= 1:
+                        self.volumen = 1.0
+                    else:
+                        sound1.set_volume(self.volumen)
+
+        ##print(f"Volumen de la musica {volumen}")
+        # Update
+        all_sprites.update()
+
+        # Colisiones meteoro - laser
+        hits = pygame.sprite.groupcollide(meteor_list, bullets, True, True)
+        for hit in hits:
+            self.score  += 10
+            meteor_sound.play()
+            meteor = Meteor()
+            all_sprites.add(meteor)
+            meteor_list.add(meteor)
+
+        # Colisiones Enemigo - laser
+        hits = pygame.sprite.groupcollide(enemy_list, bullets, True, True)
+        for hit in hits:
+            self.score += 50
+            enemy_sound.play()
+            enemy = Enemy()
+            all_sprites.add(enemy)
+            enemy_list.add(enemy)
+
+        # Colisiones Meteoro Con nave
+        hits = pygame.sprite.spritecollide(player, meteor_list, True)
+        for hit in hits:
+            player.live -= 25
+            damage.play()
+            if player.live <= 0:
+                goverSound.play()
+
+
+
+        # Colisiones Enemigo Con nave
+        hits = pygame.sprite.spritecollide(player, enemy_list, True)
+        for hit in hits:
+            player.live -= 25
+            damage.play()
+            if player.live <= 0:
+                goverSound.play()
+
+        # Dibujar en pantalla
+        screen.blit(background, [0, 0])
+        ##Mostrar estrellas
+
+        ##Estrellas
+        for coord in coor_list:
+            x = coord[0]
+            y = coord[1]
+
+            pygame.draw.circle(screen, WHITE, coord, 1)
+            coord[1] += 1  ##Y+1
+            if coord[1] > 500:
+                coord[1] = 0
+        ##Estrellas Fin
+
+        ##Mostrar Sprites
+        all_sprites.draw(screen)
+
+        ##Score
+        draw_text(screen, f"Puntuacion: {str(self.score)}", 25, WIDTH / 2, 10)
+        ##draw_text(screen,(f"Salud %{str(player.live)}"),20,70,10)
+        ##Barra de salud
+        draw_shield_bar(screen, 5, 5, player.live)
+
+        pygame.display.flip()
+
+
+
+###Nivel 2
+
+    def lvl2 (self):
+        sound1.stop()
+        sound2.set_volume(self.volumen)
+        # Process input (events)
+        for event in pygame.event.get():
+            # check for closing window
+            if event.type == pygame.QUIT:
+                self.running=False
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pausa()
+
+                if event.key == pygame.K_SPACE:
+                    player.shoot()
+
+                ##Volumen Musica -
+                if event.key == pygame.K_DOWN:
+                    self.volumen -= 0.10
+                    sound2.set_volume(self.volumen)
+
+                ##Volumen Musica +
+                if event.key == pygame.K_UP:
+                    self.volumen += 0.10
+                    sound2.set_volume(self.volumen)
+                    if self.volumen >= 1:
+                        self.volumen = 1.0
+                    else:
+                        sound2.set_volume(self.volumen)
+
+        ##print(f"Volumen de la musica {volumen}")
+        # Update
+        all_sprites.update()
+
+        # Colisiones meteoro - laser
+        hits = pygame.sprite.groupcollide(meteor_list, bullets, True, True)
+        for hit in hits:
+            self.score  += 10
+            meteor_sound.play()
+            meteor = Meteor()
+            all_sprites.add(meteor)
+            meteor_list.add(meteor)
+
+        # Colisiones Enemigo - laser
+        hits = pygame.sprite.groupcollide(enemy_list, bullets, True, True)
+        for hit in hits:
+            self.score += 50
+            enemy_sound.play()
+            enemy = Enemy()
+            all_sprites.add(enemy)
+            enemy_list.add(enemy)
+
+        # Colisiones Meteoro Con nave
+        hits = pygame.sprite.spritecollide(player, meteor_list, True)
+        for hit in hits:
+            player.live -= 25
+            damage.play()
+            if player.live <= 0:
+                goverSound.play()
+
+
+        # Colisiones Enemigo Con nave
+        hits = pygame.sprite.spritecollide(player, enemy_list, True)
+        if hits:
+            player.live -= 25
+            damage.play()
+            if player.live <= 0:
+                goverSound.play()
+
+
+        # Dibujar en pantalla
+        screen.blit(background2, [0, 0])
+        ##Mostrar estrellas
+
+        ##Estrellas
+        for coord in coor_list:
+            x = coord[0]
+            y = coord[1]
+
+            pygame.draw.circle(screen, WHITE, coord, 1)
+            coord[1] += 1  ##Y+1
+            if coord[1] > 500:
+                coord[1] = 0
+        ##Estrellas Fin
+
+        ##Mostrar Sprites
+        all_sprites.draw(screen)
+
+        ##Score
+        draw_text(screen, f"Puntuacion: {str(self.score)}", 25, WIDTH / 2, 10)
+        ##draw_text(screen,(f"Salud %{str(player.live)}"),20,70,10)
+        ##Barra de salud
+        draw_shield_bar(screen, 5, 5, player.live)
+
+        pygame.display.flip()
+
+
+    def lvl3(self):
+        sound2.stop()
+        sound3.set_volume(self.volumen)
+        # Process input (events)
+        for event in pygame.event.get():
+            # check for closing window
+            if event.type == pygame.QUIT:
+                self.running = False
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pausa()
+
+                if event.key == pygame.K_SPACE:
+                    player.shoot()
+
+                ##Volumen Musica -
+                if event.key == pygame.K_DOWN:
+                    self.volumen -= 0.10
+                    sound3.set_volume(self.volumen)
+
+                ##Volumen Musica +
+                if event.key == pygame.K_UP:
+                    self.volumen += 0.10
+                    sound3.set_volume(self.volumen)
+                    if self.volumen >= 1:
+                        self.volumen = 1.0
+                    else:
+                        sound3.set_volume(self.volumen)
+
+        ##print(f"Volumen de la musica {volumen}")
+        # Update
+        all_sprites.update()
+
+        # Colisiones meteoro - laser
+        hits = pygame.sprite.groupcollide(meteor_list, bullets, True, True)
+        for hit in hits:
+            self.score += 10
+            meteor_sound.play()
+            meteor = Meteor()
+            all_sprites.add(meteor)
+            meteor_list.add(meteor)
+
+        # Colisiones Enemigo - laser
+        hits = pygame.sprite.groupcollide(enemy_list, bullets, True, True)
+        for hit in hits:
+            self.score += 50
+            enemy_sound.play()
+            enemy = Enemy()
+            all_sprites.add(enemy)
+            enemy_list.add(enemy)
+
+        # Colisiones Meteoro Con nave
+        hits = pygame.sprite.spritecollide(player, meteor_list, True)
+        for hit in hits:
+            player.live -= 25
+            if player.live <= 0:
+                goverSound.play()
+
+
+        # Colisiones Enemigo Con nave
+        hits = pygame.sprite.spritecollide(player, enemy_list, True)
+        if hits:
+            player.live -= 25
+            damage.play()
+            if player.live <= 0:
+                goverSound.play()
+
+
+        # Dibujar en pantalla
+        screen.blit(background3, (0, 0))
+        ##Mostrar estrellas
+
+        ##Estrellas
+        for coord in coor_list:
+            x = coord[0]
+            y = coord[1]
+
+            pygame.draw.circle(screen, WHITE, coord, 1)
+            coord[1] += 1  ##Y+1
+            if coord[1] > 500:
+                coord[1] = 0
+        ##Estrellas Fin
+
+        ##Mostrar Sprites
+        all_sprites.draw(screen)
+
+        ##Score
+        draw_text(screen, f"Puntuacion: {str(self.score)}", 25, WIDTH / 2, 10)
+        ##draw_text(screen,(f"Salud %{str(player.live)}"),20,70,10)
+        ##Barra de salud
+        draw_shield_bar(screen, 5, 5, player.live)
+
+        pygame.display.flip()
+
+"""## GameOver
+def gameover_screen():
+    pausado = True
+
+    while pausado:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    pausado = False
+                elif event.key == pygame.K_q:
+                    pygame.quit()
+                    quit()
+
+        screen.fill(BLACK)
+        pygame.display.update()
+        draw_text(screen, "Pausa", 65, WIDTH // 2, HEIGHT // 4)
+        sound1.set_volume(0)  # corta la muscica de fondo
+        draw_text(screen, "Perdiste . Tocar Space para continuar o Q para Salir", 27, WIDTH // 2, HEIGHT // 2)
+        pygame.display.flip()
+        clock.tick(5)
+"""
+
+
+
+
+
+
+
+gamestate = GameState()
+
+
+while gamestate.running:
+
+
+        gamestate.state_manager()
+
+    # Keep loop running at the right speed
+        clock.tick(60)
+
+pygame.quit()

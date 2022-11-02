@@ -1,0 +1,42 @@
+Condicion de corte para niveles 
+	*eliminar 15 enemigos
+	*o puntuacion => 1000
+
+nivel 2:
+
+cambio de fondo (todo jpg)
+cambio de musica de fondo .ogg o .wav (buscar conversor online en caso de ser mp3)
+los enemigos disparan ( generar bala desde el enemigo y disminuye coordenadas) 
+los meteoros los mantenemos
+
+
+nivel 3: boss final
+
+otros: 
+averiguar drop de objetos para power ups  https://redhuli.io/creating-a-game-in-pygame-enemy-drops-and-power-ups/
+cambio de armas
+agregar vida a los enemigos
+integrar menu de aylu
+agregar explosiones al destruir enemigo
+restartear el juego, continuar y volver a inicio (usando el menu de pausa)
+ponerle un titulo al juego
+
+*********Tenemos***********
+enemigos
+player
+movimiento
+vida
+punturacion
+musica, fondo, efectos de sonido
+pausa
+gameover
+
+
+
+
+
+
+
+
+ 
+ 
